@@ -8,7 +8,10 @@ Issues and pull requests are welcome.
 python3 -m http.server 8080
 ```
 
-Open http://127.0.0.1:8080 — do not open index.html as a file.
+Open http://127.0.0.1:8080 — do not open index.html as a file. Or:
+```bash
+https://courageous-malabi-64ef58.netlify.app/
+```
 
 ## House rules
 
