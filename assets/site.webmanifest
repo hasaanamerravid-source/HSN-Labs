@@ -1,0 +1,13 @@
+{
+  "name": "HSN-Sim Labs",
+  "short_name": "HSN-Sim",
+  "description": "Classroom physics suite",
+  "start_url": "../index.html",
+  "display": "standalone",
+  "background_color": "#0e1014",
+  "theme_color": "#1bd96a",
+  "icons": [
+    { "src": "favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "logo-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}

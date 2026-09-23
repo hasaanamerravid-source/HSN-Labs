@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Combustion">
+  <defs>
+    <linearGradient id="t4" x1="8" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3ec7ff"/><stop offset="1" stop-color="#1bd96a"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#t4)"/>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#041018"/>
+  <path d="M32 48c8 0 13-5.4 13-13 0-9.6-13-23-13-23S19 25.4 19 35c0 7.6 5 13 13 13z" fill="none" stroke="#fb923c" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M32 42c3.2 0 5.2-2 5.2-4.8 0-3.4-5.2-8.6-5.2-8.6s-5.2 5.2-5.2 8.6c0 2.8 2 4.8 5.2 4.8z" fill="none" stroke="#7af0c8" stroke-width="2.2"/>
+</svg>

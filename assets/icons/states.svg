@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="States of matter">
+  <defs>
+    <linearGradient id="t3" x1="8" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3ec7ff"/><stop offset="1" stop-color="#1bd96a"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#t3)"/>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#041018"/>
+  <circle cx="24" cy="26" r="3.2" fill="#7af0c8"/>
+  <circle cx="32" cy="22" r="3.2" fill="#7af0c8"/>
+  <circle cx="28" cy="34" r="3.2" fill="#7af0c8"/>
+  <circle cx="42" cy="30" r="6" fill="none" stroke="#c4a0ff" stroke-width="2.4"/>
+  <path d="M18 46h28" stroke="#3ec7ff" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

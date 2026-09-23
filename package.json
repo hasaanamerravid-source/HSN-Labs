@@ -1,0 +1,24 @@
+{
+  "name": "hsn-sim-labs",
+  "version": "2.6.0",
+  "description": "Classroom science laboratories with coupled multiphysics and worldline time scrubbing.",
+  "license": "MIT",
+  "author": "HasaanAmerRavid",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hasaanamerravid-source/HSN-Sim-Labs.git"
+  },
+  "keywords": [
+    "physics",
+    "simulation",
+    "multiphysics",
+    "worldline",
+    "three.js",
+    "classroom"
+  ]
+}
