@@ -1,0 +1,23 @@
+{
+  "name": "hsn-labs",
+  "version": "2.7.0",
+  "description": "Classroom science laboratories: electromagnetics, beams, chemistry, and a point-kinetics core.",
+  "license": "MIT",
+  "author": "HasaanAmerRavid",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hasaanamerravid-source/HSN-Labs.git"
+  },
+  "keywords": [
+    "physics",
+    "simulation",
+    "classroom",
+    "three.js",
+    "worldline"
+  ]
+}

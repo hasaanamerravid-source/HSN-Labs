@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagDomain — HSN-Sim</title>
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] } };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+    <!-- Font Inter & MathJax for clean equations -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        mag: {
+                            north: '#ef4444',
+                            south: '#3b82f6',
+                            wall: '#a855f7',
+                            pinned: '#eab308'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f17;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+        }
+        .glow-red {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+        }
+        .glow-purple {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+        }
+        /* Glassmorphism panel styling */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* Tab active state line */
+        .tab-active {
+            border-bottom: 2px solid #38bdf8;
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="glass-panel sticky top-0 z-50 border-b border-slate-800 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-sky-500/10 rounded-xl border border-sky-500/30 text-sky-400">
+                    <i data-lucide="magnet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white leading-none">MagDomain Lab</h1>
+                    <span class="text-xs text-slate-400">Domain Theory of Magnetism & Physics Engine</span>
+                </div>
+            </div>
+
+            <!-- Quick Info Bar -->
+            <div class="flex items-center space-x-6 text-xs font-mono">
+                <div class="hidden sm:flex flex-col">
+                    <span class="text-slate-400">NET MAGNETIZATION (M)</span>
+                    <span id="header-m-val" class="text-sky-400 font-bold">0.00 A/m</span>
+                </div>
+                <div class="hidden sm:flex flex-col">
+                    <span class="text-slate-400">APPLIED FIELD (H)</span>
+                    <span id="header-h-val" class="text-amber-400 font-bold">0.00 Oe</span>
+                </div>
+                <div class="hidden md:flex flex-col">
+                    <span class="text-slate-400">STATE PHASE</span>
+                    <span id="header-phase" class="text-purple-400 font-bold">Unmagnetized Domains</span>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions -->
+            <div class="flex items-center space-x-2">
+                <button id="btn-audio-toggle" title="Toggle Barkhausen Sound" class="p-2 rounded-lg glass-panel hover:bg-slate-800 text-slate-300 transition">
+                    <i data-lucide="volume-x" id="icon-audio" class="w-5 h-5"></i>
+                </button>
+                <a href="#theory-docs" class="px-3 py-1.5 rounded-lg bg-sky-600/20 text-sky-400 border border-sky-500/30 hover:bg-sky-600/30 text-xs font-medium transition flex items-center gap-1.5">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> Documentation
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: Canvas & Control Dashboard (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- Canvas Container -->
+            <div class="glass-panel rounded-2xl p-4 relative overflow-hidden flex flex-col">
+                <!-- Top Toolbar above canvas -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-semibold text-slate-300 flex items-center gap-1">
+                            <i data-lucide="grid" class="w-4 h-4 text-sky-400"></i> Domain Lattice Simulation
+                        </span>
+                        <span id="domain-count-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            4 Domains | 400 Dipoles
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800">
+                        <button id="tool-inspect" class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/40 text-xs font-medium flex items-center gap-1">
+                            <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i> Field Probe
+                        </button>
+                        <button id="tool-pin" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-400 text-xs font-medium flex items-center gap-1">
+                            <i data-lucide="pin" class="w-3.5 h-3.5"></i> Add Impurity
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Simulation Canvas -->
+                <div class="relative w-full aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 shadow-inner group">
+                    <canvas id="sim-canvas" class="w-full h-full cursor-crosshair block"></canvas>
+                    
+                    <!-- Overlay Vector Legend & Field Direction -->
+                    <div class="absolute top-3 right-3 pointer-events-none glass-panel px-3 py-2 rounded-lg text-xs space-y-1 text-slate-300">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-1 bg-red-500 rounded-full"></span>
+                            <span>North Dipole (+x)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-1 bg-blue-500 rounded-full"></span>
+                            <span>South Dipole (-x)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span>Domain Wall</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Barkhausen Indicator Pop-up -->
+                    <div id="barkhausen-pop" class="absolute bottom-3 left-3 pointer-events-none transition-opacity opacity-0 glass-panel px-3 py-1.5 rounded-lg border-amber-500/50 text-amber-400 text-xs font-mono flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-400 animate-bounce"></i>
+                        <span>Barkhausen Jump! Wall unpinned</span>
+                    </div>
+                </div>
+
+                <!-- Canvas Control Bar & Presets -->
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button id="preset-demag" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i> Demagnetize (AC)
+                        </button>
+                        <button id="preset-sat-plus" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                            <i data-lucide="arrow-right text-red-400" class="w-3.5 h-3.5"></i> Saturation (+H)
+                        </button>
+                        <button id="preset-sat-minus" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                            <i data-lucide="arrow-left text-blue-400" class="w-3.5 h-3.5"></i> Saturation (-H)
+                        </button>
+                        <button id="preset-curie" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                            <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500"></i> Heat Above T<sub>c</sub>
+                        </button>
+                    </div>
+
+                    <button id="btn-reset-impurities" class="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition">
+                        Clear Impurities
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-5 space-y-6">
+                <h3 class="font-semibold text-sm text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4 text-sky-400"></i> Simulation Parameters
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Field Strength Slider (H) -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <label for="slider-hfield" class="font-medium text-slate-300 flex items-center gap-1.5">
+                                External Field ($H_{ext}$)
+                            </label>
+                            <span id="val-hfield" class="font-mono text-amber-400 font-bold">0.0 Oe</span>
+                        </div>
+                        <input type="range" id="slider-hfield" min="-100" max="100" value="0" step="0.5"
+                            class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
+                        <div class="flex justify-between text-[10px] font-mono text-slate-500">
+                            <span>-100 Oe (Reverse)</span>
+                            <span>0 Oe</span>
+                            <span>+100 Oe (Forward)</span>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Slider (T) -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <label for="slider-temp" class="font-medium text-slate-300 flex items-center gap-1.5">
+                                Temperature ($T$)
+                            </label>
+                            <span id="val-temp" class="font-mono text-sky-400 font-bold">300 K</span>
+                        </div>
+                        <input type="range" id="slider-temp" min="0" max="1100" value="300" step="5"
+                            class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400">
+                        <div class="flex justify-between text-[10px] font-mono text-slate-500">
+                            <span>0 K (Absolute Zero)</span>
+                            <span class="text-amber-500">Curie T<sub>c</sub> ~1043K</span>
+                            <span>1100 K</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Material Selector & Features -->
+                <div class="pt-4 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Ferromagnetic Material</label>
+                        <select id="select-material" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg p-2.5 focus:border-sky-500 focus:outline-none">
+                            <option value="soft_iron" selected>Soft Iron (Low Coercivity)</option>
+                            <option value="hard_steel">Hard Steel (High Coercivity)</option>
+                            <option value="neodymium">Neodymium (NdFeB Magnet)</option>
+                            <option value="nickel">Nickel Material</option>
+                            <option value="alnico">Alnico Alloy</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Domain Boundary Mode</label>
+                        <select id="select-domain-mode" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg p-2.5 focus:border-sky-500 focus:outline-none">
+                            <option value="dynamic_walls">Dynamic Wall Displacement</option>
+                            <option value="fixed_walls">Rotation Only (Fine Grain)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Barkhausen Pinning</label>
+                        <select id="select-pinning" class="w-full bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg p-2.5 focus:border-sky-500 focus:outline-none">
+                            <option value="medium">Medium Crystal Defects</option>
+                            <option value="high">High Impurity Pinning</option>
+                            <option value="none">Pure Crystal (Smooth)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Real-Time Analytics & Gauges (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+
+            <div class="glass-panel rounded-2xl p-4 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i> Hysteresis Loop ($M-H$)
+                    </h3>
+                    <span id="hysteresis-state" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/50">
+                        Live Plotting
+                    </span>
+                </div>
+
+                <!-- Hysteresis Canvas -->
+                <div class="relative w-full aspect-square bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                    <canvas id="hysteresis-canvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Loop Parameters Metrics -->
+                <div class="grid grid-cols-2 gap-2 mt-3 text-xs font-mono">
+                    <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-500 block">RETENTIVITY ($M_r$)</span>
+                        <span id="val-mr" class="text-sky-400 font-bold">0.68 Sat</span>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-500 block">COERCIVITY ($H_c$)</span>
+                        <span id="val-hc" class="text-amber-400 font-bold">18.5 Oe</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Net Magnetization Vector Gauge -->
+            <div class="glass-panel rounded-2xl p-4 space-y-3">
+                <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                    <i data-lucide="compass" class="w-4 h-4 text-purple-400"></i> Bulk Magnetization Vector
+                </h3>
+
+                <div class="flex items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <!-- Gauge Canvas / Visual Arrow -->
+                    <div class="relative w-20 h-20 flex items-center justify-center">
+                        <div id="vector-arrow-bg" class="w-full h-full rounded-full border border-slate-800 flex items-center justify-center relative">
+                            <!-- Axis lines -->
+                            <div class="absolute w-full h-[1px] bg-slate-800"></div>
+                            <div class="absolute h-full w-[1px] bg-slate-800"></div>
+                            <!-- Rotating Needle -->
+                            <div id="magnetization-needle" class="w-12 h-1 bg-gradient-to-r from-blue-500 to-red-500 rounded-full transition-transform duration-75 origin-center shadow-lg" style="transform: rotate(0deg);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics -->
+                    <div class="space-y-2 text-right font-mono">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">MAGNITUDE (|M|)</span>
+                            <span id="val-m-mag" class="text-lg font-bold text-slate-100">0.02</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">ORIENTATION</span>
+                            <span id="val-m-angle" class="text-xs text-slate-400">0.0°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Material Physics Specs Card -->
+            <div class="glass-panel rounded-2xl p-4 text-xs space-y-2">
+                <h4 class="font-semibold text-slate-300 flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i> Active Material Specs
+                </h4>
+                <div class="space-y-1 text-slate-400 font-mono text-[11px]">
+                    <div class="flex justify-between">
+                        <span>Curie Temperature:</span>
+                        <span id="spec-tc" class="text-slate-200">1043 K</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Magnetic Anisotropy:</span>
+                        <span id="spec-anisotropy" class="text-slate-200">Medium</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Domain Wall Mobility:</span>
+                        <span id="spec-mobility" class="text-slate-200">High</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <section id="theory-docs" class="max-w-7xl w-full mx-auto p-4 lg:p-6 mt-6">
+        <div class="glass-panel rounded-2xl p-6 lg:p-8 space-y-8">
+            
+            <div class="border-b border-slate-800 pb-4">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-6 h-6 text-sky-400"></i>
+                    Comprehensive Guide: Domain Theory of Magnetism
+                </h2>
+                <p class="text-slate-400 text-sm mt-1">
+                    An in-depth physical breakdown of microscopic ferromagnetic domains, quantum exchange forces, domain wall dynamics, and hysteresis.
+                </p>
+            </div>
+
+            <!-- Documentation Tabs -->
+            <div class="flex border-b border-slate-800 text-sm font-medium space-x-6 overflow-x-auto">
+                <button class="doc-tab tab-active pb-3" onclick="switchDocTab('tab-domains')">1. Magnetic Domains</button>
+                <button class="doc-tab text-slate-400 hover:text-slate-200 pb-3" onclick="switchDocTab('tab-mechanisms')">2. Magnetization Mechanisms</button>
+                <button class="doc-tab text-slate-400 hover:text-slate-200 pb-3" onclick="switchDocTab('tab-hysteresis')">3. Hysteresis Loop</button>
+                <button class="doc-tab text-slate-400 hover:text-slate-200 pb-3" onclick="switchDocTab('tab-curie')">4. Curie Point ($T_c$)</button>
+                <button class="doc-tab text-slate-400 hover:text-slate-200 pb-3" onclick="switchDocTab('tab-applications')">5. Engineering Applications</button>
+            </div>
+
+            <!-- Tab Content 1: Magnetic Domains -->
+            <div id="tab-domains" class="doc-tab-content space-y-4 text-slate-300 text-sm leading-relaxed">
+                <h3 class="text-lg font-semibold text-sky-400">What are Weiss Domains?</h3>
+                <p>
+                    In ferromagnetic materials such as Iron ($\text{Fe}$), Cobalt ($\text{Co}$), and Nickel ($\text{Ni}$), atomic magnetic dipoles do not point in random independent directions. Instead, due to quantum mechanical forces, neighboring electron spins spontaneously align parallel to one another within localized microscopic regions called <strong>magnetic domains</strong> (or Weiss domains).
+                </p>
+                
+                <!-- Math Formula Box -->
+                <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 font-mono text-xs text-sky-300 space-y-1">
+                    <p class="font-bold text-slate-200">Quantum Exchange Energy Integral:</p>
+                    <p>$$E_{ex} = -2 J \sum_{i,j} \mathbf{S}_i \cdot \mathbf{S}_j$$</p>
+                    <p class="text-slate-400 text-[11px]">Where $J > 0$ for ferromagnetism, making parallel spin alignment ($\mathbf{S}_i \cdot \mathbf{S}_j > 0$) energetically favorable.</p>
+                </div>
+
+                <p>
+                    Even though individual domains are fully magnetized internally, an unmagnetized piece of bulk iron exhibits **zero net macroscopic magnetic field**. This occurs because domains orient randomly to minimize total magnetostatic self-energy, canceling each other's fields out.
+                </p>
+            </div>
+
+            <!-- Tab Content 2: Magnetization Mechanisms -->
+            <div id="tab-mechanisms" class="doc-tab-content hidden space-y-4 text-slate-300 text-sm leading-relaxed">
+                <h3 class="text-lg font-semibold text-sky-400">Two Processes of Magnetization</h3>
+                <p>
+                    When an external magnetic field ($H$) is applied to a ferromagnetic material, magnetization occurs via two distinct physical mechanisms depending on field strength:
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-purple-400 flex items-center gap-2">
+                            <i data-lucide="move" class="w-4 h-4"></i> 1. Domain Wall Displacement
+                        </h4>
+                        <p class="text-xs text-slate-400">
+                            At weak-to-moderate external fields, magnetic domain boundaries (Bloch / Néel walls) physically move. Domains favorably oriented toward the external field expand, while unfavorably oriented domains shrink.
+                        </p>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-amber-400 flex items-center gap-2">
+                            <i data-lucide="rotate-cw" class="w-4 h-4"></i> 2. Domain Vector Rotation
+                        </h4>
+                        <p class="text-xs text-slate-400">
+                            At high magnetic fields near saturation, domain wall motion stops. Instead, the entire magnetization vector of remaining domains forcefully rotates out of its easy crystallographic axis to line up completely parallel with $H$.
+                        </p>
+                    </div>
+                </div>
+                <h4 class="font-semibold text-slate-200">The Barkhausen Effect</h4>
+                <p>
+                    Domain wall motion is not smooth! As domain walls move through the crystal lattice, they get pinned by impurities, grain boundaries, and crystal defects. When the external field increases sufficiently, the wall suddenly snaps past the barrier. This irreversible jump produces micro-magnetic noise known as the <strong>Barkhausen Effect</strong>.
+                </p>
+            </div>
+
+            <!-- Tab Content 3: Hysteresis Loop -->
+            <div id="tab-hysteresis" class="doc-tab-content hidden space-y-4 text-slate-300 text-sm leading-relaxed">
+                <h3 class="text-lg font-semibold text-sky-400">Deconstructing the Magnetic Hysteresis ($M-H$) Loop</h3>
+                <p>
+                    Hysteresis refers to the lag of magnetic induction behind the applied magnetizing force. When an external field is cycled, the material traces out a characteristic loop.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono my-2">
+                    <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                        <span class="text-sky-400 font-bold block mb-1">Saturation Magnetization ($M_s$)</span>
+                        Maximum achievable magnetic alignment where all domains are fully rotated parallel to $H$.
+                    </div>
+                    <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                        <span class="text-amber-400 font-bold block mb-1">Remanence / Retentivity ($M_r$)</span>
+                        Residual magnetization remaining in the material when the external field $H$ is reduced to zero.
+                    </div>
+                    <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                        <span class="text-red-400 font-bold block mb-1">Coercivity ($H_c$)</span>
+                        Reverse magnetic field strength required to completely demagnetize the material ($M = 0$).
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 4: Curie Point -->
+            <div id="tab-curie" class="doc-tab-content hidden space-y-4 text-slate-300 text-sm leading-relaxed">
+                <h3 class="text-lg font-semibold text-sky-400">Curie Temperature ($T_C$) & Thermal Disorder</h3>
+                <p>
+                    Thermal energy disrupts domain ordering. As temperature increases, lattice vibrations (phonons) cause dipoles within domains to wobble violently.
+                </p>
+                <p>
+                    When the temperature reaches the critical <strong>Curie Temperature ($T_C$)</strong> (e.g., $1043\text{ K}$ or $770^\circ\text{C}$ for pure Iron), thermal energy completely overcomes the quantum exchange energy ($k_B T > J$).
+                </p>
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-xs text-amber-300">
+                    $$\text{Phase Transition: Ferromagnetic } (T < T_C) \longrightarrow \text{ Paramagnetic } (T \ge T_C)$$
+                </div>
+            </div>
+
+            <!-- Tab Content 5: Applications -->
+            <div id="tab-applications" class="doc-tab-content hidden space-y-4 text-slate-300 text-sm leading-relaxed">
+                <h3 class="text-lg font-semibold text-sky-400">Engineering & Practical Applications</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-1">
+                        <span class="font-bold text-slate-200 block text-xs">Transformer Cores & AC Motors</span>
+                        <p class="text-xs text-slate-400">Require <strong>Soft Ferromagnetic materials</strong> (low $H_c$, narrow hysteresis loop) to minimize energy loss per cycle ($W = \oint H\, dM$).</p>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-1">
+                        <span class="font-bold text-slate-200 block text-xs">Permanent Magnets & Hard Drives</span>
+                        <p class="text-xs text-slate-400">Require <strong>Hard Ferromagnetic materials</strong> (high $H_c$, high $M_r$) like Neodymium to resist demagnetization and retain data stored as magnetic domains.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500 font-mono">
+        <p>MagDomain · HSN-Sim Labs · MIT · HasaanAmerRavid</p>
+    </footer>
+
+    <script>
+        // --- Material Physics Specifications ---
+        const MATERIAL_PRESETS = {
+            soft_iron: { name: 'Soft Iron', hc: 12, mr: 0.65, tc: 1043, pinning: 0.15, anisotropy: 'Low', mobility: 'High' },
+            hard_steel: { name: 'Hard Steel', hc: 45, mr: 0.85, tc: 1020, pinning: 0.6, anisotropy: 'High', mobility: 'Low' },
+            neodymium: { name: 'Neodymium (NdFeB)', hc: 85, mr: 0.95, tc: 580, pinning: 0.85, anisotropy: 'Very High', mobility: 'Very Low' },
+            nickel: { name: 'Nickel', hc: 20, mr: 0.50, tc: 627, pinning: 0.25, anisotropy: 'Medium', mobility: 'Medium' },
+            alnico: { name: 'Alnico Alloy', hc: 60, mr: 0.80, tc: 1130, pinning: 0.5, anisotropy: 'High', mobility: 'Medium' }
+        };
+
+        // --- Simulation State Variables ---
+        let simState = {
+            hField: 0,            // Applied Field (-100 to +100)
+            temperature: 300,     // Kelvin
+            materialKey: 'soft_iron',
+            activeTool: 'inspect', // 'inspect' or 'pin'
+            audioEnabled: false,
+            domainMode: 'dynamic_walls',
+            
+            // Domain wall boundary position (0 to 1, offset relative to center)
+            wallOffset: 0,
+            
+            // Grid configuration
+            gridCols: 20,
+            gridRows: 20,
+            dipoles: [],          // Array of dipole objects {x, y, angle, targetAngle, domainId, pinned}
+            pinningSites: [],     // Custom impurity coordinates [{x, y}]
+            
+            // Calculated outputs
+            netMagnetizationX: 0,
+            netMagnetizationY: 0,
+            netMagMagnitude: 0,
+            
+            // Hysteresis Plot history
+            mhHistory: []
+        };
+
+        // DOM Element Cache
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const hystCanvas = document.getElementById('hysteresis-canvas');
+        const hystCtx = hystCanvas.getContext('2d');
+
+        // Web Audio API Synth for Barkhausen Clicks
+        let audioCtx = null;
+
+        // Initialize Audio context on user gesture
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playBarkhausenClick() {
+            if (!simState.audioEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150 + Math.random() * 600, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.04);
+            } catch(e) {}
+        }
+
+        function initLattice() {
+            simState.dipoles = [];
+            const total = simState.gridCols * simState.gridRows;
+            
+            for (let r = 0; r < simState.gridRows; r++) {
+                for (let c = 0; c < simState.gridCols; c++) {
+                    // Assign 4 initial domains based on quadrants
+                    let domainId = 0;
+                    let baseAngle = 0;
+
+                    if (c < simState.gridCols / 2 && r < simState.gridRows / 2) {
+                        domainId = 0; // Top-Left: Points +x (0)
+                        baseAngle = 0;
+                    } else if (c >= simState.gridCols / 2 && r < simState.gridRows / 2) {
+                        domainId = 1; // Top-Right: Points -x (PI)
+                        baseAngle = Math.PI;
+                    } else if (c < simState.gridCols / 2 && r >= simState.gridRows / 2) {
+                        domainId = 2; // Bottom-Left: Points -x (PI)
+                        baseAngle = Math.PI;
+                    } else {
+                        domainId = 3; // Bottom-Right: Points +x (0)
+                        baseAngle = 0;
+                    }
+
+                    simState.dipoles.push({
+                        col: c,
+                        row: r,
+                        angle: baseAngle,
+                        baseAngle: baseAngle,
+                        domainId: domainId,
+                        pinned: false
+                    });
+                }
+            }
+        }
+
+        function updatePhysics() {
+            const mat = MATERIAL_PRESETS[simState.materialKey];
+            const isParamagnetic = simState.temperature >= mat.tc;
+
+            // 1. Calculate Target Domain Wall Offset from H-field
+            // Wall motion occurs easily for low coercivity materials
+            const fieldSensitivity = 0.008 * (100 / mat.hc);
+            let targetWallOffset = simState.hField * fieldSensitivity;
+            
+            // Check pinning jump (Barkhausen effect)
+            if (Math.abs(targetWallOffset - simState.wallOffset) > 0.15 * mat.pinning) {
+                // Pinning site jump event
+                showBarkhausenPop();
+                playBarkhausenClick();
+            }
+
+            // Smooth wall movement with inertia
+            simState.wallOffset += (targetWallOffset - simState.wallOffset) * 0.1;
+
+            // 2. Update Dipoles (Wall Displacement + Dipole Rotation + Thermal Noise)
+            let sumX = 0;
+            let sumY = 0;
+
+            const thermalNoiseAmp = isParamagnetic 
+                ? Math.PI 
+                : (simState.temperature / mat.tc) * 0.8;
+
+            simState.dipoles.forEach((d) => {
+                let effectiveDomain = d.domainId;
+
+                // Adjust domain assignment based on wallOffset (domain wall displacement)
+                if (simState.domainMode === 'dynamic_walls') {
+                    const normalizedCol = (d.col - simState.gridCols / 2) / (simState.gridCols / 2);
+                    if (normalizedCol < simState.wallOffset) {
+                        // Favorable domain expands
+                        effectiveDomain = (d.row < simState.gridRows / 2) ? 0 : 3; // Points right (+x)
+                    } else {
+                        effectiveDomain = (d.row < simState.gridRows / 2) ? 1 : 2; // Points left (-x)
+                    }
+                }
+
+                // Base domain angle
+                let preferredAngle = (effectiveDomain === 0 || effectiveDomain === 3) ? 0 : Math.PI;
+
+                // Domain Vector Rotation towards external field H
+                // At high H-field, force vector to align with H-field direction (0 or PI)
+                const hRotationFactor = Math.min(1.0, Math.abs(simState.hField) / (mat.hc * 1.5));
+                const targetHAngle = simState.hField >= 0 ? 0 : Math.PI;
+
+                let angleWithoutNoise = preferredAngle * (1 - hRotationFactor) + targetHAngle * hRotationFactor;
+
+                // Add stochastic thermal noise
+                const noise = (Math.random() - 0.5) * thermalNoiseAmp;
+                
+                if (d.pinned) {
+                    // Pinned dipole resists rotation
+                    d.angle += (angleWithoutNoise - d.angle) * 0.05;
+                } else {
+                    d.angle = angleWithoutNoise + noise;
+                }
+
+                sumX += Math.cos(d.angle);
+                sumY += Math.sin(d.angle);
+            });
+
+            // 3. Compute Bulk Magnetization Vector (M)
+            const count = simState.dipoles.length;
+            simState.netMagnetizationX = sumX / count;
+            simState.netMagnetizationY = sumY / count;
+            simState.netMagMagnitude = Math.sqrt(simState.netMagnetizationX ** 2 + simState.netMagnetizationY ** 2);
+
+            // 4. Update M-H Hysteresis curve history
+            recordMHPoint(simState.hField, simState.netMagnetizationX);
+        }
+
+        function recordMHPoint(h, m) {
+            // Keep recent history for smooth curve drawing
+            simState.mhHistory.push({ h, m, temp: simState.temperature });
+            if (simState.mhHistory.length > 250) {
+                simState.mhHistory.shift();
+            }
+        }
+
+        function renderCanvas() {
+            // Resize canvas resolution if needed
+            if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+            }
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const cellW = width / simState.gridCols;
+            const cellH = height / simState.gridRows;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Background Domain Region Colors
+            const midX = (width / 2) + (simState.wallOffset * width / 2);
+            
+            // Favorable domain background highlight
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.05)'; // Red tint for +x domain
+            ctx.fillRect(0, 0, midX, height);
+
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.05)'; // Blue tint for -x domain
+            ctx.fillRect(midX, 0, width - midX, height);
+
+            // Draw Domain Wall Line
+            ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(midX, 0);
+            ctx.lineTo(midX, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Pinning Impurities
+            simState.pinningSites.forEach(p => {
+                ctx.fillStyle = '#eab308';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw Magnetic Dipole Arrows
+            simState.dipoles.forEach((d) => {
+                const cx = d.col * cellW + cellW / 2;
+                const cy = d.row * cellH + cellH / 2;
+                const arrowLen = Math.min(cellW, cellH) * 0.38;
+
+                const dx = Math.cos(d.angle) * arrowLen;
+                const dy = Math.sin(d.angle) * arrowLen;
+
+                // Color based on x-orientation component
+                const cosVal = Math.cos(d.angle);
+                const r = Math.floor(127 + 128 * cosVal);
+                const b = Math.floor(127 - 128 * cosVal);
+                
+                ctx.save();
+                ctx.translate(cx, cy);
+
+                // Dipole line
+                ctx.strokeStyle = d.pinned ? '#eab308' : `rgb(${r}, 80, ${b})`;
+                ctx.lineWidth = d.pinned ? 3 : 2;
+                ctx.beginPath();
+                ctx.moveTo(-dx, -dy);
+                ctx.lineTo(dx, dy);
+                ctx.stroke();
+
+                // Arrowhead (North pole)
+                const headLen = 4;
+                const arrowAngle = Math.atan2(dy, dx);
+                ctx.fillStyle = d.pinned ? '#fef08a' : (cosVal >= 0 ? '#ef4444' : '#3b82f6');
+                ctx.beginPath();
+                ctx.moveTo(dx, dy);
+                ctx.lineTo(
+                    dx - headLen * Math.cos(arrowAngle - Math.PI / 6),
+                    dy - headLen * Math.sin(arrowAngle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    dx - headLen * Math.cos(arrowAngle + Math.PI / 6),
+                    dy - headLen * Math.sin(arrowAngle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        function renderHysteresis() {
+            if (hystCanvas.width !== hystCanvas.clientWidth || hystCanvas.height !== hystCanvas.clientHeight) {
+                hystCanvas.width = hystCanvas.clientWidth;
+                hystCanvas.height = hystCanvas.clientHeight;
+            }
+
+            const w = hystCanvas.width;
+            const h = hystCanvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            hystCtx.clearRect(0, 0, w, h);
+
+            // Grid Axes
+            hystCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            hystCtx.lineWidth = 1;
+            hystCtx.beginPath();
+            hystCtx.moveTo(0, cy); hystCtx.lineTo(w, cy); // H-axis
+            hystCtx.moveTo(cx, 0); hystCtx.lineTo(cx, h); // M-axis
+            hystCtx.stroke();
+
+            // Axis Labels
+            hystCtx.fillStyle = '#64748b';
+            hystCtx.font = '10px monospace';
+            hystCtx.fillText('+H', w - 20, cy - 6);
+            hystCtx.fillText('-H', 5, cy - 6);
+            hystCtx.fillText('+M', cx + 6, 12);
+            hystCtx.fillText('-M', cx + 6, h - 6);
+
+            // Draw Idealized Characteristic Hysteresis Loop for Active Material
+            const mat = MATERIAL_PRESETS[simState.materialKey];
+            hystCtx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            hystCtx.lineWidth = 1.5;
+            hystCtx.beginPath();
+            
+            for (let step = -100; step <= 100; step += 2) {
+                let hNorm = step / 100;
+                // Sigmoidal hysteresis model
+                let mAsc = Math.tanh((step - mat.hc) * 0.04) * mat.mr;
+                let xPx = cx + (step / 100) * (w * 0.42);
+                let yPx = cy - (mAsc) * (h * 0.42);
+                if (step === -100) hystCtx.moveTo(xPx, yPx);
+                else hystCtx.lineTo(xPx, yPx);
+            }
+            for (let step = 100; step >= -100; step -= 2) {
+                let mDesc = Math.tanh((step + mat.hc) * 0.04) * mat.mr;
+                let xPx = cx + (step / 100) * (w * 0.42);
+                let yPx = cy - (mDesc) * (h * 0.42);
+                hystCtx.lineTo(xPx, yPx);
+            }
+            hystCtx.closePath();
+            hystCtx.stroke();
+
+            // Render Real-time Active Trajectory
+            if (simState.mhHistory.length > 1) {
+                hystCtx.strokeStyle = '#38bdf8';
+                hystCtx.lineWidth = 2.5;
+                hystCtx.beginPath();
+
+                simState.mhHistory.forEach((pt, i) => {
+                    let px = cx + (pt.h / 100) * (w * 0.42);
+                    let py = cy - (pt.m) * (h * 0.42);
+                    if (i === 0) hystCtx.moveTo(px, py);
+                    else hystCtx.lineTo(px, py);
+                });
+                hystCtx.stroke();
+
+                // Current Point Indicator
+                const lastPt = simState.mhHistory[simState.mhHistory.length - 1];
+                let curX = cx + (lastPt.h / 100) * (w * 0.42);
+                let curY = cy - (lastPt.m) * (h * 0.42);
+
+                hystCtx.fillStyle = '#ef4444';
+                hystCtx.beginPath();
+                hystCtx.arc(curX, curY, 5, 0, Math.PI * 2);
+                hystCtx.fill();
+                hystCtx.strokeStyle = '#ffffff';
+                hystCtx.lineWidth = 1.5;
+                hystCtx.stroke();
+            }
+        }
+
+        function updateUIGauges() {
+            const mat = MATERIAL_PRESETS[simState.materialKey];
+            const isParamagnetic = simState.temperature >= mat.tc;
+
+            // Header & Gauges text
+            document.getElementById('header-h-val').textContent = `${simState.hField.toFixed(1)} Oe`;
+            document.getElementById('header-m-val').textContent = `${(simState.netMagnetizationX * 1000).toFixed(0)} A/m`;
+            document.getElementById('val-hfield').textContent = `${simState.hField.toFixed(1)} Oe`;
+            document.getElementById('val-temp').textContent = `${simState.temperature} K`;
+
+            document.getElementById('val-m-mag').textContent = simState.netMagMagnitude.toFixed(2);
+            
+            const angleDeg = (Math.atan2(simState.netMagnetizationY, simState.netMagnetizationX) * 180 / Math.PI).toFixed(1);
+            document.getElementById('val-m-angle').textContent = `${angleDeg}°`;
+
+            // Needle rotation
+            const needle = document.getElementById('magnetization-needle');
+            needle.style.transform = `rotate(${angleDeg}deg) scaleX(${Math.max(0.2, simState.netMagMagnitude)})`;
+
+            // Phase indicator
+            const phaseElem = document.getElementById('header-phase');
+            if (isParamagnetic) {
+                phaseElem.textContent = 'Paramagnetic Phase (T > Tc)';
+                phaseElem.className = 'text-red-400 font-bold animate-pulse';
+            } else if (Math.abs(simState.netMagnetizationX) > 0.85) {
+                phaseElem.textContent = 'Saturated Magnetization';
+                phaseElem.className = 'text-amber-400 font-bold';
+            } else {
+                phaseElem.textContent = 'Ferromagnetic Domains';
+                phaseElem.className = 'text-purple-400 font-bold';
+            }
+
+            // Material Specs
+            document.getElementById('val-mr').textContent = `${(mat.mr * 100).toFixed(0)}% Sat`;
+            document.getElementById('val-hc').textContent = `${mat.hc.toFixed(1)} Oe`;
+            document.getElementById('spec-tc').textContent = `${mat.tc} K`;
+            document.getElementById('spec-anisotropy').textContent = mat.anisotropy;
+            document.getElementById('spec-mobility').textContent = mat.mobility;
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'hsn-domains',
+                    H: simState.hField,
+                    M: simState.netMagnetizationX,
+                    T: simState.temperature,
+                    tc: mat.tc,
+                    phase: isParamagnetic ? 'paramagnetic' : (Math.abs(simState.netMagnetizationX) > 0.85 ? 'saturated' : 'domains')
+                }, '*');
+            }
+        }
+
+        function showBarkhausenPop() {
+            const pop = document.getElementById('barkhausen-pop');
+            pop.style.opacity = '1';
+            setTimeout(() => { pop.style.opacity = '0'; }, 800);
+        }
+
+        function setupEventListeners() {
+            // Field Slider
+            document.getElementById('slider-hfield').addEventListener('input', (e) => {
+                simState.hField = parseFloat(e.target.value);
+            });
+
+            // Temperature Slider
+            document.getElementById('slider-temp').addEventListener('input', (e) => {
+                simState.temperature = parseInt(e.target.value);
+            });
+
+            // Material Select
+            document.getElementById('select-material').addEventListener('change', (e) => {
+                simState.materialKey = e.target.value;
+                simState.mhHistory = []; // Reset plot for new material
+            });
+
+            // Domain Mode Select
+            document.getElementById('select-domain-mode').addEventListener('change', (e) => {
+                simState.domainMode = e.target.value;
+            });
+
+            // Audio Toggle
+            document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+                initAudio();
+                simState.audioEnabled = !simState.audioEnabled;
+                const icon = document.getElementById('icon-audio');
+                if (simState.audioEnabled) {
+                    icon.setAttribute('data-lucide', 'volume-2');
+                    document.getElementById('btn-audio-toggle').classList.add('bg-sky-500/20', 'text-sky-400');
+                } else {
+                    icon.setAttribute('data-lucide', 'volume-x');
+                    document.getElementById('btn-audio-toggle').classList.remove('bg-sky-500/20', 'text-sky-400');
+                }
+                lucide.createIcons();
+            });
+
+            // Tool selection
+            document.getElementById('tool-inspect').addEventListener('click', () => {
+                simState.activeTool = 'inspect';
+                document.getElementById('tool-inspect').className = 'px-2.5 py-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/40 text-xs font-medium flex items-center gap-1';
+                document.getElementById('tool-pin').className = 'px-2.5 py-1 rounded hover:bg-slate-800 text-slate-400 text-xs font-medium flex items-center gap-1';
+            });
+
+            document.getElementById('tool-pin').addEventListener('click', () => {
+                simState.activeTool = 'pin';
+                document.getElementById('tool-pin').className = 'px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs font-medium flex items-center gap-1';
+                document.getElementById('tool-inspect').className = 'px-2.5 py-1 rounded hover:bg-slate-800 text-slate-400 text-xs font-medium flex items-center gap-1';
+            });
+
+            // Canvas Click (Add Impurity Pinning Site)
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                if (simState.activeTool === 'pin') {
+                    simState.pinningSites.push({ x: clickX, y: clickY });
+                    
+                    // Pin nearest dipole
+                    const cellW = canvas.width / simState.gridCols;
+                    const cellH = canvas.height / simState.gridRows;
+                    const col = Math.floor(clickX / cellW);
+                    const row = Math.floor(clickY / cellH);
+                    
+                    const dipole = simState.dipoles.find(d => d.col === col && d.row === row);
+                    if (dipole) dipole.pinned = true;
+                }
+            });
+
+            // Preset Action Buttons
+            document.getElementById('preset-demag').addEventListener('click', () => {
+                // AC Demagnetization sequence
+                let count = 0;
+                const interval = setInterval(() => {
+                    simState.hField = Math.sin(count * 0.5) * (100 - count * 4);
+                    document.getElementById('slider-hfield').value = simState.hField;
+                    count++;
+                    if (count >= 25) {
+                        clearInterval(interval);
+                        simState.hField = 0;
+                        document.getElementById('slider-hfield').value = 0;
+                    }
+                }, 40);
+            });
+
+            document.getElementById('preset-sat-plus').addEventListener('click', () => {
+                simState.hField = 100;
+                document.getElementById('slider-hfield').value = 100;
+            });
+
+            document.getElementById('preset-sat-minus').addEventListener('click', () => {
+                simState.hField = -100;
+                document.getElementById('slider-hfield').value = -100;
+            });
+
+            document.getElementById('preset-curie').addEventListener('click', () => {
+                simState.temperature = 1080;
+                document.getElementById('slider-temp').value = 1080;
+            });
+
+            
+            document.getElementById('select-pinning').addEventListener('change', (e) => {
+                const map = { none: 0.02, medium: 0.3, high: 0.75 };
+                const mat = MATERIAL_PRESETS[simState.materialKey];
+                mat.pinning = map[e.target.value] ?? mat.pinning;
+            });
+
+            document.getElementById('btn-reset-impurities').addEventListener('click', () => {
+                simState.pinningSites = [];
+                simState.dipoles.forEach(d => d.pinned = false);
+            });
+        }
+
+        // Documentation Tab Switcher
+        window.switchDocTab = function(tabId) {
+            document.querySelectorAll('.doc-tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.doc-tab').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('text-slate-400');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            event.currentTarget.classList.add('tab-active');
+            event.currentTarget.classList.remove('text-slate-400');
+        };
+
+        let simPaused = false;
+        window.addEventListener("message", (ev) => {
+            const data = ev.data;
+            if (!data || data.type !== "hsn-domains-ctl") return;
+            simPaused = !!data.paused;
+        });
+
+        function mainLoop() {
+            if (!simPaused) {
+                updatePhysics();
+                renderCanvas();
+                renderHysteresis();
+                updateUIGauges();
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        // Initialize Application
+        window.onload = function() {
+            lucide.createIcons();
+            initLattice();
+            setupEventListeners();
+            mainLoop();
+        };
+    </script>
+</body>
+</html>

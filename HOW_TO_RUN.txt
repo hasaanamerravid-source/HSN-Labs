@@ -1,0 +1,11 @@
+HSN-Labs will look empty if you double-click index.html.
+
+ES modules cannot load from file://.
+
+1. Open a terminal in this folder
+2. Run:  python3 -m http.server 8080
+   or:   ./start.sh
+3. In the browser go to:  http://127.0.0.1:8080
+
+Three.js and cannon-es are bundled in vendor/ so the 3D rooms
+do not need the internet after that.

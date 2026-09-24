@@ -1,0 +1,22 @@
+{
+  "format": "HSN-Sim-EM-1.0",
+  "savedAt": "2026-09-23T00:00:00.000Z",
+  "magnet": {
+    "voltage": 18,
+    "turns": 520,
+    "resistance": 6.5,
+    "length": 0.09,
+    "muR": 400,
+    "powered": false,
+    "gravity": 9.81
+  },
+  "objects": [
+    { "id": "iron-a", "type": "ironSphere", "position": { "x": -0.16, "y": 0.12, "z": 0.18 } },
+    { "id": "iron-b", "type": "ironSphere", "position": { "x": -0.06, "y": 0.12, "z": 0.24 } },
+    { "id": "nail-1", "type": "steelNail", "position": { "x": 0.14, "y": 0.14, "z": 0.16 } },
+    { "id": "clip-1", "type": "paperclip", "position": { "x": 0.22, "y": 0.1, "z": 0.22 } },
+    { "id": "wood-1", "type": "woodBlock", "position": { "x": 0.38, "y": 0.12, "z": 0.06 } },
+    { "id": "alu-1", "type": "aluCube", "position": { "x": -0.34, "y": 0.13, "z": 0.1 } },
+    { "id": "plate-1", "type": "plate", "position": { "x": 0.02, "y": 0.1, "z": 0.3 } }
+  ]
+}
